@@ -1,0 +1,68 @@
+<html>
+<header>
+    <link rel="stylesheet" href="./Libs/style559.css">
+</header>
+
+<body>
+    <script type="module">
+        import { setExample } from "./3dTransformToy.js";
+
+        /**
+         * Set up the demo
+         */
+        window.onload = function () {
+            let headingDiv = document.createElement("div");
+            headingDiv.id = "headingDiv";
+            document.getElementsByTagName("body")[0].appendChild(headingDiv);
+
+            let br = document.createElement("br");
+            document.getElementsByTagName("body")[0].appendChild(br);
+
+            let examples = [
+                {
+                    title: "Scale about a 45 degrees Axis",
+                    transformations:
+                        [
+                            ["rotate", 45],
+                            ["scale", 2, 1],
+                            ["rotate", -45],
+                            ["fillRect", -10, -10, 20, 20, "#F0000080"]
+                        ]
+                }
+            ];
+
+            let titles = ["Please select one example"];
+            let exampleDivs = [];
+            examples.forEach(e => {
+                exampleDivs.push(setExample(e.title, e.transformations));
+                titles.push(e.title);
+            });
+
+            // make a dropdown menu to select examples
+            let selectExample = document.createElement("select");
+            titles.forEach(function (t) {
+                let option = document.createElement("option");
+                option.value = t;
+                option.text = t;
+                selectExample.add(option);
+            });
+            selectExample.id = "exampleSelect";
+            headingDiv.appendChild(selectExample);
+
+            // switch between different examples
+            let currentExample;
+            selectExample.onchange = function () {
+                if (currentExample) currentExample.style.display = "none";
+                let selectedTitle = selectExample.options[selectExample.selectedIndex].text;
+                exampleDivs.forEach(ed => {
+                    if (ed.id == selectedTitle + "-example") {
+                        currentExample = ed;
+                    }
+                });
+                if (currentExample) currentExample.style.display = "flex";
+            };
+        }
+    </script>
+</body>
+
+</html>
