@@ -87,6 +87,14 @@ function doTransform(scene, transformList, param, direction = 1) {
     // is the text in the code section under the canvas
     let html = "";
 
+    // 0 and 1 are lights, 2 is the coordinate system
+    for (let i = 3; i < scene.children.length; i++) {
+        let object = scene.children[i];
+        object.position.set(0, 0, 0);
+        object.rotation.set(0, 0, 0);
+        object.scale.set(1, 1, 1);
+    }
+
     // iterate through all transforms in the list
     // but some will get done, some will not (based on how big param is)
     // look at the array test1 in the beginning of this script to have an idea of how "t
@@ -124,7 +132,8 @@ function doTransform(scene, transformList, param, direction = 1) {
                 let boxMesh = new T.Mesh(boxGeom, boxMat);
                 boxMesh.name = name;
                 scene.add(boxMesh);
-                
+                let axesHelper = new T.AxesHelper(3);
+                boxMesh.add(axesHelper);
             } 
             if (object && !amt) {
                 scene.remove(object);
@@ -137,51 +146,71 @@ function doTransform(scene, transformList, param, direction = 1) {
             // translate, rotate, scale
             if (command == "translateX") {
                 let x = t[2] * amt;
-                if (object) {
-                    object.position.set(0, 0, 0);
+                if (object && amt > 0) {
                     object.translateX(x);
                 }
                 html += stylize(amt, name + `.translationX(${x.toFixed(1)});`);
             } else if (command == "translateY") {
                 let y = t[2] * amt;
-                if (object) {
-                    object.position.set(0, 0, 0);
+                if (object && amt > 0) {
                     object.translateY(y);
                 }
                 html += stylize(amt, name + `.translationY(${y.toFixed(1)});`);
             } else if (command == "translateZ") {
                 let z = t[2] * amt;
-                if (object) {
-                    object.position.set(0, 0, 0);
+                if (object && amt > 0) {
                     object.translateZ(z);
                 }
                 html += stylize(amt, name + `.translationZ(${z.toFixed(1)});`);
+            } else if (command == "position") {
+                let x = t[2] * amt;
+                let y = t[3] * amt;
+                let z = t[4] * amt;
+                if (object && amt > 0) {
+                    object.position.set(x, y, z);
+                }
+                html += stylize(amt, name + `.position.set(${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)});`);
             } else if (command == "rotateX") {
                 let a = t[2] * amt;
-                if (object) {
-                    object.rotation.set(0, 0, 0);
+                if (object && amt > 0) {
                     object.rotateX(degToRad(a));
                 }
                 html += stylize(amt, name + `.rotateX(${a.toFixed(1)});`);
             } else if (command == "rotateY") {
                 let a = t[2] * amt;
-                if (object) {
-                    object.rotation.set(0, 0, 0);
+                if (object && amt > 0) {
                     object.rotateY(degToRad(a));
                 }
                 html += stylize(amt, name + `.rotateY(${a.toFixed(1)});`);
             } else if (command == "rotateZ") {
                 let a = t[2] * amt;
-                if (object) {
-                    object.rotation.set(0, 0, 0);
+                if (object && amt > 0) {
                     object.rotateZ(degToRad(a));
                 }
                 html += stylize(amt, name + `.rotateZ(${a.toFixed(1)});`);
+            } else if (command == "rotation") {
+                let x = t[2] * amt;
+                let y = t[3] * amt;
+                let z = t[4] * amt;
+                if (object && amt > 0) {
+                    object.rotation.set(degToRad(x), degToRad(y), degToRad(z));
+                }
+                html += stylize(amt, name + `.rotation.set(${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)});`);
+            } else if (command == "rotateAxis") {
+                let x = t[2];
+                let y = t[3];
+                let z = t[4];
+                let a = t[5] * amt;
+                let axis = new T.Vector3(x, y, z);
+                if (object && amt > 0) {
+                    object.rotateOnAxis(axis, degToRad(a));
+                }
+                html += stylize(amt, name + `.rotateOnAxis(new T.Vector3(${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}), ${a.toFixed(1)});`);
             } else if (command == "scale") {
                 let x = amt * t[2] + (1 - amt) * 1;
                 let y = amt * t[3] + (1 - amt) * 1;
                 let z = amt * t[4] + (1 - amt) * 1;
-                if (object) {
+                if (object && amt > 0) {
                     object.scale.set(x, y, z);
                 }
                 html += stylize(amt, name + `.scale.set(${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)});`);
