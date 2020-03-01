@@ -20,13 +20,20 @@
 
             let examples = [
                 {
-                    title: "Scale about a 45 degrees Axis",
+                    title: "Bend an arm 45 degrees at Elbow and Wrist",
                     transformations:
                         [
-                            ["rotate", 45],
-                            ["scale", 2, 1],
-                            ["rotate", -45],
-                            ["fillRect", -10, -10, 20, 20, "#F0000080"]
+                            ["box", "cube1", 2, 2, 2, "green"],
+                            ["rotateY", "cube1", 45],
+                            ["scale", "cube1", 2, 0.5, 1],
+                            ["box", "cube2", 2, 2, 2, "blue"],
+                            ["translateY", "cube2", 1.5],
+                            ["rotateY", "cube2", 45],
+                            ["scale", "cube2", 0.5, 1, 1],
+                            ["box", "cube3", 2, 2, 2, "red"],
+                            ["translateY", "cube3", 3],
+                            ["rotateY", "cube3", 45],
+                            ["scale", "cube3", 2, 0.5, 1],
                         ]
                 }
             ];

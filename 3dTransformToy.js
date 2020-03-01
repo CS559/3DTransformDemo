@@ -20,13 +20,13 @@ function degToRad(angle) {
 /**
  * Draw a coordinate system
  */
-function drawCsys() {
+function drawCsys(colors = ["black", "grey"]) {
     let csys = new T.Group();
     let dimension = 12;
     let axisGeom = new T.BoxGeometry(0.05, 0.05, dimension);
     let lineGeom = new T.BoxGeometry(0.02, 0.02, dimension / 2);
-    let axisMat = new T.MeshStandardMaterial({ color: "black"});
-    let lineMat = new T.MeshStandardMaterial({ color: "grey"});
+    let axisMat = new T.MeshStandardMaterial({ color: colors[0]});
+    let lineMat = new T.MeshStandardMaterial({ color: colors[1]});
     let arrowGeom = new T.ConeGeometry(0.2, 0.5);
     
     let axisX = new T.Mesh(axisGeom, axisMat);
@@ -82,59 +82,99 @@ function drawCsys() {
 }
 
 /**
- * @param {HTMLDivElement} parent
- * @param {string} id
+ * Do transforms as specified in transformList. The number of transforms 
+ * to do is decided by param
  */
-function setRenderer(parent, id) {
-    let renderer = new T.WebGLRenderer();
-    renderer.setSize(400, 400);
-    renderer.domElement.id = id;
-    document.getElementById(parent.id).appendChild(renderer.domElement);
+function doTransform(scene, transformList, param, direction = 1) {
+    // is the text in the code section under the canvas
+    let html = "";
 
-    let scene = new T.Scene();
-    scene.background = new T.Color("white");
-    let camera = new T.PerspectiveCamera(40, renderer.domElement.width / renderer.domElement.height, 1, 1000);
+    // iterate through all transforms in the list
+    // but some will get done, some will not (based on how big param is)
+    // look at the array test1 in the beginning of this script to have an idea of how "t
+    // below would be like
+    transformList.forEach(function (t, i) {
+        let command = t[0];
+        let name = t[1];
+        let object = scene.getObjectByName(name);
 
-    camera.position.z = 10;
-    camera.position.y = 10;
-    camera.position.x = 10;
-    camera.lookAt(0, 0, 0);
+        // keep track of which commands are ready to be run
+        let amt = (direction >= 0) ?
+            (i > param) ? 0 : Math.min(1, param - i) : // if direction >= 0, do this line
+            ((i + 1) < param) ? 0 : Math.min(1, (i + 1) - param); // if not, do this line
 
-    // since we're animating, add OrbitControls
-    let controls = new OrbitControls(camera, renderer.domElement);
+        // console.log(`param ${param} i ${i} amt ${amt} `)
 
-    scene.add(new T.AmbientLight("white", 1));
+        /**
+         * made a local function so it has access to direction and list
+         * @param {Number} amt
+         * @param {string} htmlLine
+         */
+        function stylize(amt, htmlLine) {
+            let style = (amt <= 0) ? "c-zero" : ((amt < 1) ? "c-act" : "c-one");
+            return (`<span class="${style}">${htmlLine}</span><br/>`);
+        }
 
-    // two lights - both a little off white to give some contrast
-    let dirLight1 = new T.DirectionalLight(0xF0E0D0, 1);
-    dirLight1.position.set(1, 1, 0);
-    scene.add(dirLight1);
-
-    // let dirLight2 = new T.DirectionalLight(0xD0E0F0, 0.7);
-    // dirLight2.position.set(0, 1, -0.2);
-    // scene.add(dirLight2);
-
-    // let dirLight3 = new T.DirectionalLight(0xD0E0F0, 0.7);
-    // dirLight3.position.set(1, 0, -0.2);
-    // scene.add(dirLight3);
-
-    // // make a ground plane
-    // let groundBox = new T.BoxGeometry(10, 0.1, 10);
-    // let groundMesh = new T.Mesh(groundBox, new T.MeshStandardMaterial({color: "green"}));
-    // // put the top of the box at the ground level (0)
-    // groundMesh.position.y = -0.05;
-    // scene.add(groundMesh);
-
-    let csys = drawCsys();
-    scene.add(csys);
-
-    function animate() {
-        //** EXAMPLE CODE - STUDENT SHOULD REPLACE */
-        // move in a circle 
-        renderer.render(scene, camera);
-        window.requestAnimationFrame(animate);
-    }
-    animate();
+        if (command == "box") {
+            if (!object) {
+                let color = t.length > 5 ? t[5] : "blue";
+                let boxMat = new T.MeshStandardMaterial({color: color});
+                let width = t[2];
+                let height = t[3];
+                let depth = t[4];
+                let boxGeom = new T.BoxGeometry(width, height, depth);
+                let boxMesh = new T.Mesh(boxGeom, boxMat);
+                boxMesh.name = name;
+                scene.add(boxMesh);
+                html += stylize(amt, `let boxMat = new T.MeshStandardMaterial({color: "${color}");`);
+                html += stylize(amt, `let boxGeom = new T.BoxGeometry(${t[1]},${t[2]},${t[3]});`);
+                html += stylize(amt, `let boxMesh = new T.Mesh(boxGeom, boxMat);`);
+                html += stylize(amt, `scene.add(boxMesh);`);
+            }
+        } else {
+            // translate, rotate, scale
+            if (command == "translateX") {
+                let x = t[2] * amt;
+                object.position.set(0, 0, 0);
+                object.translateX(x);
+                html += stylize(amt, `object.translationX(${x.toFixed(1)});`);
+            } else if (command == "translateY") {
+                let y = t[2] * amt;
+                object.position.set(0, 0, 0);
+                object.translateY(y);
+                html += stylize(amt, `object.translationY(${y.toFixed(1)});`);
+            } else if (command == "translateZ") {
+                let z = t[2] * amt;
+                object.position.set(0, 0, 0);
+                object.translateZ(z);
+                html += stylize(amt, `object.translationZ(${z.toFixed(1)});`);
+            } else if (command == "rotateX") {
+                let a = t[2] * amt;
+                object.rotation.set(0, 0, 0);
+                object.rotateX(degToRad(a));
+                html += stylize(amt, `object.rotateX(${a.toFixed(1)});`);
+            } else if (command == "rotateY") {
+                let a = t[2] * amt;
+                object.rotation.set(0, 0, 0);
+                object.rotateY(degToRad(a));
+                html += stylize(amt, `object.rotateY(${a.toFixed(1)});`);
+            } else if (command == "rotateZ") {
+                let a = t[2] * amt;
+                object.rotation.set(0, 0, 0);
+                object.rotateZ(degToRad(a));
+                html += stylize(amt, `object.rotateZ(${a.toFixed(1)});`);
+            } else if (command == "scale") {
+                let x = amt * t[2] + (1 - amt) * 1;
+                let y = amt * t[3] + (1 - amt) * 1;
+                let z = amt * t[4] + (1 - amt) * 1;
+                object.scale.set(x, y, z);
+                html += stylize(amt, `object.scale.set(${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)});`);
+            } else { // bad command
+                console.log(`Bad transform ${t}`);
+            }
+        }
+    });
+    return html;
 }
 
 /**
@@ -191,328 +231,143 @@ export function setExample(title, transforms = undefined) {
     leftDiv.style.cssText = "padding-right: 30px";
     document.getElementById(exampleDiv.id).appendChild(leftDiv);
 
-    setRenderer(leftDiv, name + "-leftRd");
+    let leftRenderer = new T.WebGLRenderer();
+    leftRenderer.setSize(400, 400);
+    leftRenderer.domElement.id = name + "-rightRd";
+    document.getElementById(leftDiv.id).appendChild(leftRenderer.domElement);
+
+    let leftScene = new T.Scene();
+    leftScene.background = new T.Color("white");
+    let camera = new T.PerspectiveCamera(40, leftRenderer.domElement.width / leftRenderer.domElement.height, 1, 1000);
+
+    camera.position.z = 10;
+    camera.position.y = 10;
+    camera.position.x = 10;
+    camera.lookAt(0, 0, 0);
+
+    // since we're animating, add OrbitControls
+    let controls = new OrbitControls(camera, leftRenderer.domElement);
+
+    leftScene.add(new T.AmbientLight("white", 1));
+
+    // two lights - both a little off white to give some contrast
+    let dirLight1 = new T.DirectionalLight(0xF0E0D0, 1);
+    dirLight1.position.set(1, 1, 0);
+    leftScene.add(dirLight1);
+
+    // let dirLight2 = new T.DirectionalLight(0xD0E0F0, 0.7);
+    // dirLight2.position.set(0, 1, -0.2);
+    // scene.add(dirLight2);
+
+    // let dirLight3 = new T.DirectionalLight(0xD0E0F0, 0.7);
+    // dirLight3.position.set(1, 0, -0.2);
+    // scene.add(dirLight3);
+
+    // // make a ground plane
+    // let groundBox = new T.BoxGeometry(10, 0.1, 10);
+    // let groundMesh = new T.Mesh(groundBox, new T.MeshStandardMaterial({color: "green"}));
+    // // put the top of the box at the ground level (0)
+    // groundMesh.position.y = -0.05;
+    // scene.add(groundMesh);
+
+    let csys = drawCsys();
+    leftScene.add(csys);
 
     let leftPanel = document.createElement("div");
     leftPanel.id = name + "-leftPanel";
     document.getElementById(leftDiv.id).appendChild(leftPanel);
 
-    // checkbox and label for reversion
-    // let dirTog = document.createElement("input");
-    // dirTog.setAttribute("type", "checkbox");
-    // dirTog.id = name + "-dt";
-    // document.getElementById(leftPanel.id).appendChild(dirTog);
+    //checkbox and label for reversion
+    let dirTog = document.createElement("input");
+    dirTog.setAttribute("type", "checkbox");
+    dirTog.id = name + "-dt";
+    document.getElementById(leftPanel.id).appendChild(dirTog);
 
-    // let dirLabel = document.createElement("label");
-    // dirLabel.setAttribute("for", dirTog.id);
-    // dirLabel.innerText = "Reverse";
-    // document.getElementById(leftPanel.id).appendChild(dirLabel);
+    let dirLabel = document.createElement("label");
+    dirLabel.setAttribute("for", dirTog.id);
+    dirLabel.innerText = "Reverse";
+    document.getElementById(leftPanel.id).appendChild(dirLabel);
 
-    // let leftBrOne = document.createElement("br");
-    // leftBrOne.id = name + "-leftBr2";
-    // document.getElementById(leftPanel.id).appendChild(leftBrOne);
+    let leftBrOne = document.createElement("br");
+    leftBrOne.id = name + "-leftBr2";
+    document.getElementById(leftPanel.id).appendChild(leftBrOne);
 
-    // // checkbox and label for showing the final result
-    // let resultTog = document.createElement("input");
-    // resultTog.setAttribute("type", "checkbox");
-    // resultTog.setAttribute("checked", "true");
-    // resultTog.id = name + "-rt";
-    // document.getElementById(leftPanel.id).appendChild(resultTog);
+    // checkbox and label for showing the final result
+    let resultTog = document.createElement("input");
+    resultTog.setAttribute("type", "checkbox");
+    resultTog.setAttribute("checked", "true");
+    resultTog.id = name + "-rt";
+    document.getElementById(leftPanel.id).appendChild(resultTog);
 
-    // let resultLabel = document.createElement("label");
-    // resultLabel.setAttribute("for", resultTog.id);
-    // resultLabel.innerText = "Show the final result";
-    // document.getElementById(leftPanel.id).appendChild(resultLabel);
+    let resultLabel = document.createElement("label");
+    resultLabel.setAttribute("for", resultTog.id);
+    resultLabel.innerText = "Show the final result";
+    document.getElementById(leftPanel.id).appendChild(resultLabel);
 
-    // let leftCodeDiv = document.createElement("div");
-    // leftCodeDiv.style.cssText = "font-family: 'Courier New', Courier, monospace; " +
-    //     "font-size: 120%; padding-top: 5px";
-    // document.getElementById(leftDiv.id).appendChild(leftCodeDiv);
+    let leftCodeDiv = document.createElement("div");
+    leftCodeDiv.style.cssText = "font-family: 'Courier New', Courier, monospace; " +
+        "font-size: 120%; padding-top: 5px";
+    document.getElementById(leftDiv.id).appendChild(leftCodeDiv);
 
     // right part, including a canvas, a code block
     let rightDiv = document.createElement("div");
     rightDiv.id = name + "-rightDiv";
     document.getElementById(exampleDiv.id).appendChild(rightDiv);
 
-    setRenderer(rightDiv, name + "-rightRd");
+    //let rightScene = setRenderer(rightDiv, name + "-rightRd");
 
-    // let rightPanel = document.createElement("div");
-    // rightPanel.id = name + "-rightPanel";
-    // rightPanel.style.cssText = "margin-top: 27px";
-    // document.getElementById(rightDiv.id).appendChild(rightPanel);
+    let rightPanel = document.createElement("div");
+    rightPanel.id = name + "-rightPanel";
+    rightPanel.style.cssText = "margin-top: 27px";
+    document.getElementById(rightDiv.id).appendChild(rightPanel);
 
-    // // checkbox and label for showing the original coordinate system
-    // let orTogRight = document.createElement("input");
-    // orTogRight.setAttribute("type", "checkbox");
-    // orTogRight.setAttribute("checked", "true");
-    // orTogRight.id = name + "-ot";
-    // document.getElementById(rightPanel.id).appendChild(orTogRight);
+    // checkbox and label for showing the original coordinate system
+    let orTogRight = document.createElement("input");
+    orTogRight.setAttribute("type", "checkbox");
+    orTogRight.setAttribute("checked", "true");
+    orTogRight.id = name + "-ot";
+    document.getElementById(rightPanel.id).appendChild(orTogRight);
 
-    // let orLabelRight = document.createElement("label");
-    // orLabelRight.setAttribute("for", orTogRight.id);
-    // orLabelRight.innerText = "Show the original coordinate system";
-    // document.getElementById(rightPanel.id).appendChild(orLabelRight);
+    let orLabelRight = document.createElement("label");
+    orLabelRight.setAttribute("for", orTogRight.id);
+    orLabelRight.innerText = "Show the original coordinate system";
+    document.getElementById(rightPanel.id).appendChild(orLabelRight);
 
-    // let rightBrOne = document.createElement("br");
-    // rightBrOne.id = name + "-rightBr1";
-    // document.getElementById(rightPanel.id).appendChild(rightBrOne);
+    let rightBrOne = document.createElement("br");
+    rightBrOne.id = name + "-rightBr1";
+    document.getElementById(rightPanel.id).appendChild(rightBrOne);
 
-    // // checkbox and label for showing the final coordinate system
-    // let finalTog = document.createElement("input");
-    // finalTog.setAttribute("type", "checkbox");
-    // finalTog.id = name + "-cst";
-    // document.getElementById(rightPanel.id).appendChild(finalTog);
+    // checkbox and label for showing the final coordinate system
+    let finalTog = document.createElement("input");
+    finalTog.setAttribute("type", "checkbox");
+    finalTog.id = name + "-cst";
+    document.getElementById(rightPanel.id).appendChild(finalTog);
 
-    // let finalLabel = document.createElement("label");
-    // finalLabel.setAttribute("for", finalTog.id);
-    // finalLabel.innerText = "Show the final coordinate system";
-    // document.getElementById(rightPanel.id).appendChild(finalLabel);
+    let finalLabel = document.createElement("label");
+    finalLabel.setAttribute("for", finalTog.id);
+    finalLabel.innerText = "Show the final coordinate system";
+    document.getElementById(rightPanel.id).appendChild(finalLabel);
 
-    // let rightCodeDiv = document.createElement("div");
-    // rightCodeDiv.style.cssText = "font-family: 'Courier New', Courier, monospace; " +
-    //     "font-size: 120%; padding-top: 5px";
-    // document.getElementById(rightDiv.id).appendChild(rightCodeDiv);
+    let rightCodeDiv = document.createElement("div");
+    rightCodeDiv.style.cssText = "font-family: 'Courier New', Courier, monospace; " +
+        "font-size: 120%; padding-top: 5px";
+    document.getElementById(rightDiv.id).appendChild(rightCodeDiv);
 
-    // /**
-    //  * Hide the user input sliders
-    //  * @param {{ sliders: HTMLDivElement[]; }} customCommand
-    //  */
-    // function hideSliders(customCommand) {
-    //     if (customCommand && customCommand.sliders) {
-    //         customCommand.sliders.forEach(
-    //             /**
-    //              * @param {HTMLDivElement} sd
-    //              */
-    //             function (sd) {
-    //                 sd.style.display = "none";
-    //             }
-    //         );
-    //     }
-    // }
+    let rc = new RunCanvas(leftRenderer.domElement, undefined);
+    rc.noloop = true;
+    rc.setupSlider(0, transforms.length, 0.02);
+    rc.setValue(0);
 
-    // /**
-    //  * Hide reverse if there is save/restore command
-    //  * @param {Array<Array>} transformList
-    //  */
-    // function hideDirTog(transformList) {
-    //     for (let i = 0; i < transformList.length; i++) {
-    //         let t = transformList[i];
-    //         if (t[0] == "save" || t[0] == "restore") {
-    //             dirTog.disabled = true;
-    //             dirLabel.style.color = "lightgray";
-    //             return;
-    //         }
-    //     }
-    //     dirTog.disabled = false;
-    //     dirLabel.style.color = "black";
-    // }
-
-    // /**
-    //  * Reset the running canvas
-    //  */
-    // function reset() {
-    //     leftCanvas.getContext("2d").clearRect(0, 0, leftCanvas.width, leftCanvas.height);
-    //     rightCanvas.getContext("2d").clearRect(0, 0, rightCanvas.width, rightCanvas.height);
-    //     document.getElementById(canvasName + "-slider").style.display = "none";
-    //     document.getElementById(canvasName + "-text").style.display = "none";
-    //     document.getElementById(canvasName + "-run").style.display = "none";
-    //     document.getElementById(canvasName + "-br").style.display = "none";
-    // }
-
+    function animate() {
+        let param = Number(rc.range.value);
+        doTransform(leftScene, transforms, param, dirTog ? (dirTog.checked ? -1 : 1) : 1);
+        leftRenderer.render(leftScene, camera);
+        window.requestAnimationFrame(animate);
+    }
+    animate();
+    
     // if (transforms) {
-    //     hideDirTog(transforms);
     //     run(transforms);
-    // } else {
-    //     // the customized example
-    //     let customDiv = document.createElement("div");
-    //     customDiv.id = canvasName + "-custom";
-    //     insertAfter(customDiv, leftPanel);
-
-    //     // a dropdown menu used to select a command
-    //     let select = makeSelect(["Please select one transform", "translate", "scale", 
-    //     "rotate", "fillRect", "save", "restore"], customDiv);
-    //     select.id = canvasName + "-select";
-    //     select.style.cssText = "margin-bottom: 5px; margin-top: 10px";
-
-    //     // button to add the selected transform to the list
-    //     let addButton = document.createElement("button");
-    //     addButton.id = canvasName + "-addB";
-    //     addButton.innerHTML = "Add";
-    //     addButton.style.cssText = "margin-left: 7px";
-    //     customDiv.appendChild(addButton);
-
-    //     // button to delete the last transform from the list
-    //     let deleteButton = document.createElement("button");
-    //     deleteButton.id = canvasName + "-deleteB";
-    //     deleteButton.innerHTML = "Delete";
-    //     deleteButton.style.cssText = "margin-left: 7px";
-    //     customDiv.appendChild(deleteButton);
-
-    //     // button to run the program
-    //     let runButton = document.createElement("button");
-    //     runButton.id = canvasName + "-runB";
-    //     runButton.innerHTML = "Run";
-    //     runButton.style.cssText = "margin-left: 7px";
-    //     customDiv.appendChild(runButton);
-
-    //     // button to reset the program
-    //     let resetButton = document.createElement("button");
-    //     resetButton.id = canvasName + "-resetB";
-    //     resetButton.innerHTML = "Reset";
-    //     resetButton.style.cssText = "margin-left: 7px";
-    //     customDiv.appendChild(resetButton);
-
-    //     rightCodeDiv.style.paddingTop = "38px";
-
-    //     // initially hide the panels
-    //     leftPanel.style.display = "none";
-    //     rightPanel.style.display = "none";
-
-    //     let customTransformList = [];
-    //     let customCommand;
-    //     let running;
-    //     let lastInnerHTML = [];
-
-    //     addButton.onclick = function () {
-    //         if (customCommand) {
-    //             let customTransform = [];
-    //             let parameters = "";
-    //             customTransform.push(customCommand.name);
-    //             // read the value of sliders
-    //             if (customCommand.sliders) {
-    //                 customCommand.sliders.forEach(
-    //                     /**
-    //                      * @param {HTMLDivElement} sd
-    //                      * @param {Number} i
-    //                      */
-    //                     function (sd, i) {
-    //                         let sdSlider = /** @type {HTMLInputElement} */ (sd.children[0]);
-    //                         customTransform.push(Number(sdSlider.value));
-    //                         parameters += (i ? "," : "") + sdSlider.value;
-    //                     }
-    //                 );
-    //             }
-    //             customTransformList.push(customTransform);
-    //             // console.log(customTransform);
-    //             lastInnerHTML.push(leftCodeDiv.innerHTML);
-    //             let htmlLine = "context." + customTransform[0] + "(" + parameters + ");";
-    //             leftCodeDiv.innerHTML += `<span class="c-one">${htmlLine}</span><br/>`;
-    //         }
-    //     };
-
-    //     deleteButton.onclick = function () {
-    //         if (customTransformList.length > 0) {
-    //             customTransformList.pop();
-    //             leftCodeDiv.innerHTML = lastInnerHTML.pop();
-    //         }
-    //     };
-
-    //     runButton.onclick = function () {
-    //         // hide the sliders and reverse toggle
-    //         hideSliders(customCommand);
-    //         hideDirTog(customTransformList);
-    //         // reset the drop down menu
-    //         select.options[0].selected = true;
-    //         // in case the user keeps clicking run
-    //         if (running) {
-    //             leftCodeDiv.innerHTML = "";
-    //             rightCodeDiv.innerHTML = "";
-    //             reset();
-    //         }
-    //         // if there is a valid transforamtion list
-    //         if (customTransformList.length > 0) {
-    //             run(customTransformList);
-    //             leftPanel.style.display = "block"; // show the panels
-    //             rightPanel.style.display = "block";
-    //             // in case the user clicks add when an example is running
-    //             addButton.disabled = true;
-    //             deleteButton.disabled = true;
-    //             select.disabled = true;
-    //             running = true;
-    //         }
-    //         // console.log(customTransformList);
-    //     };
-
-    //     resetButton.onclick = function () {
-    //         // reset the drop down menu
-    //         select.options[0].selected = true;
-    //         // clear the code divisions
-    //         leftCodeDiv.innerHTML = "";
-    //         rightCodeDiv.innerHTML = "";
-    //         // hide the sliders if there are any
-    //         hideSliders(customCommand);
-    //         leftPanel.style.display = "none";
-    //         rightPanel.style.display = "none";
-    //         // reset reverse toggle
-    //         dirTog.checked = false;
-    //         // enable the button
-    //         addButton.disabled = false;
-    //         deleteButton.disabled = false;
-    //         select.disabled = false;
-    //         // reset these if it is running
-    //         if (running) {
-    //             reset();
-    //             running = false;
-    //         }
-    //         // clear the transformation parameters
-    //         customCommand = undefined;
-    //         customTransformList = [];
-    //     };
-
-    //     select.onchange = function () {
-    //         let command = select.options[select.selectedIndex].text;
-    //         // hide the sliders if there are any
-    //         hideSliders(customCommand);
-    //         // create sliders and transformation command based on the selected option
-    //         if (command == "translate") {
-    //             // each slider corresponds to a parameter
-    //             let translateX = createSlider("translateX: ", -50, 50, 0, 5);
-    //             translateX.id = canvasName + "-tX";
-    //             let translateY = createSlider("translateY: ", -50, 50, 0, 5);
-    //             translateY.id = canvasName + "-tY";
-    //             // store the sliders to a custom command
-    //             customCommand = { name: "translate", sliders: [translateX, translateY] };
-    //         } else if (command == "scale") {
-    //             let scaleX = createSlider("scaleX: ", 0, 3, 1, 0.5);
-    //             scaleX.id = canvasName + "-sX";
-    //             let scaleY = createSlider("scaleY: ", 0, 3, 1, 0.5);
-    //             scaleY.id = canvasName + "-sY";
-    //             customCommand = { name: "scale", sliders: [scaleX, scaleY] };
-    //         } else if (command == "rotate") {
-    //             let rotate = createSlider("angle: ", -180, 180, 0, 5);
-    //             rotate.id = canvasName + "-rotate";
-    //             customCommand = { name: "rotate", sliders: [rotate] };
-    //         } else if (command == "fillRect") {
-    //             let posX = createSlider("posX: ", -50, 50, 0, 10);
-    //             posX.id = canvasName + "-pX";
-    //             let posY = createSlider("posY: ", -50, 50, 0, 10);
-    //             posY.id = canvasName + "-pY";
-    //             let sizeX = createSlider("sizeX: ", 0, 100, 0, 10);
-    //             sizeX.id = canvasName + "-sizeX";
-    //             let sizeY = createSlider("sizeY: ", 0, 100, 0, 10);
-    //             sizeY.id = canvasName + "-sizeY";
-    //             customCommand = { name: "fillRect", sliders: [posX, posY, sizeX, sizeY] };
-    //         } else if (command == "save") {
-    //             customCommand = { name: "save"};
-    //         } else if (command == "restore") {
-    //             customCommand = { name: "restore"};
-    //         } else {
-    //             // bad transforamtion command
-    //             customCommand = undefined;
-    //         }
-    //         // if a valid command, show related input sliders
-    //         if (customCommand && customCommand.sliders) {
-    //             customCommand.sliders.forEach(
-    //                 /**
-    //                  * @param {HTMLDivElement} sd
-    //                  */
-    //                 function (sd) {
-    //                     customDiv.appendChild(sd);
-    //                     sd.style.display = "block";
-    //                 }
-    //             );
-    //         }
-    //     };
-    // }
+    // }   
     return exampleDiv;
 }
