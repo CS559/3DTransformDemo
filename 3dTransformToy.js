@@ -6,8 +6,6 @@
 import { RunCanvas } from "./Libs/runCanvas.js";
 import * as T from "./THREE/src/Three.js";
 import { OrbitControls } from "./THREE/examples/jsm/controls/OrbitControls.js";
-import { onWindowOnload } from "./Libs/helpers.js";
-import { Material, Vector3 } from "./THREE/src/Three.js";
 
 /**
  * Convert angles from degrees to radians
@@ -116,8 +114,8 @@ function doTransform(scene, transformList, param, direction = 1) {
         }
 
         if (command == "box") {
-            if (!object) {
-                let color = t.length > 5 ? t[5] : "blue";
+            let color = t.length > 5 ? t[5] : "blue";
+            if (!object && amt) {
                 let boxMat = new T.MeshStandardMaterial({color: color});
                 let width = t[2];
                 let height = t[3];
@@ -126,88 +124,73 @@ function doTransform(scene, transformList, param, direction = 1) {
                 let boxMesh = new T.Mesh(boxGeom, boxMat);
                 boxMesh.name = name;
                 scene.add(boxMesh);
-                html += stylize(amt, `let boxMat = new T.MeshStandardMaterial({color: "${color}");`);
-                html += stylize(amt, `let boxGeom = new T.BoxGeometry(${t[1]},${t[2]},${t[3]});`);
-                html += stylize(amt, `let boxMesh = new T.Mesh(boxGeom, boxMat);`);
-                html += stylize(amt, `scene.add(boxMesh);`);
+                
+            } 
+            if (object && !amt) {
+                scene.remove(object);
             }
+            html += stylize(amt, `let ` + name + `Mat = new T.MeshStandardMaterial({color: "${color}"});`);
+            html += stylize(amt, `let ` + name + `Geom = new T.BoxGeometry(${t[2]}, ${t[3]}, ${t[4]});`);
+            html += stylize(amt, `let ` + name + `Mesh = new T.Mesh(boxGeom, boxMat);`);
+            html += stylize(amt, `scene.add(` + name + `Mesh);`);
         } else {
             // translate, rotate, scale
             if (command == "translateX") {
                 let x = t[2] * amt;
-                object.position.set(0, 0, 0);
-                object.translateX(x);
-                html += stylize(amt, `object.translationX(${x.toFixed(1)});`);
+                if (object) {
+                    object.position.set(0, 0, 0);
+                    object.translateX(x);
+                }
+                html += stylize(amt, name + `.translationX(${x.toFixed(1)});`);
             } else if (command == "translateY") {
                 let y = t[2] * amt;
-                object.position.set(0, 0, 0);
-                object.translateY(y);
-                html += stylize(amt, `object.translationY(${y.toFixed(1)});`);
+                if (object) {
+                    object.position.set(0, 0, 0);
+                    object.translateY(y);
+                }
+                html += stylize(amt, name + `.translationY(${y.toFixed(1)});`);
             } else if (command == "translateZ") {
                 let z = t[2] * amt;
-                object.position.set(0, 0, 0);
-                object.translateZ(z);
-                html += stylize(amt, `object.translationZ(${z.toFixed(1)});`);
+                if (object) {
+                    object.position.set(0, 0, 0);
+                    object.translateZ(z);
+                }
+                html += stylize(amt, name + `.translationZ(${z.toFixed(1)});`);
             } else if (command == "rotateX") {
                 let a = t[2] * amt;
-                object.rotation.set(0, 0, 0);
-                object.rotateX(degToRad(a));
-                html += stylize(amt, `object.rotateX(${a.toFixed(1)});`);
+                if (object) {
+                    object.rotation.set(0, 0, 0);
+                    object.rotateX(degToRad(a));
+                }
+                html += stylize(amt, name + `.rotateX(${a.toFixed(1)});`);
             } else if (command == "rotateY") {
                 let a = t[2] * amt;
-                object.rotation.set(0, 0, 0);
-                object.rotateY(degToRad(a));
-                html += stylize(amt, `object.rotateY(${a.toFixed(1)});`);
+                if (object) {
+                    object.rotation.set(0, 0, 0);
+                    object.rotateY(degToRad(a));
+                }
+                html += stylize(amt, name + `.rotateY(${a.toFixed(1)});`);
             } else if (command == "rotateZ") {
                 let a = t[2] * amt;
-                object.rotation.set(0, 0, 0);
-                object.rotateZ(degToRad(a));
-                html += stylize(amt, `object.rotateZ(${a.toFixed(1)});`);
+                if (object) {
+                    object.rotation.set(0, 0, 0);
+                    object.rotateZ(degToRad(a));
+                }
+                html += stylize(amt, name + `.rotateZ(${a.toFixed(1)});`);
             } else if (command == "scale") {
                 let x = amt * t[2] + (1 - amt) * 1;
                 let y = amt * t[3] + (1 - amt) * 1;
                 let z = amt * t[4] + (1 - amt) * 1;
-                object.scale.set(x, y, z);
-                html += stylize(amt, `object.scale.set(${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)});`);
+                if (object) {
+                    object.scale.set(x, y, z);
+                }
+                html += stylize(amt, name + `.scale.set(${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)});`);
             } else { // bad command
                 console.log(`Bad transform ${t}`);
             }
         }
     });
     return html;
-}
-
-/**
- * Create a slider with given parameters
- * @param {string} name
- * @param {number} min
- * @param {number} max
- * @param {number} value
- * @param {number} step
- */
-function setSlider(name, min, max, value, step) {
-    let sliderDiv = document.createElement("div");
-
-    let slider = document.createElement("input");
-    slider.setAttribute("type", "range");
-    slider.style.width = String(270);
-    slider.setAttribute("min", String(min));
-    slider.setAttribute("max", String(max));
-    slider.setAttribute("value", String(value));
-    slider.setAttribute("step", String(step));
-    sliderDiv.appendChild(slider);
-
-    let sliderLabel = document.createElement("label");
-    sliderLabel.setAttribute("for", slider.id);
-    sliderLabel.innerText = name + slider.value;
-    sliderLabel.style.cssText = "margin-left: 7px";
-    sliderDiv.appendChild(sliderLabel);
-
-    slider.oninput = function () {
-        sliderLabel.innerText = name + String(slider.value);
-    };
-
-    return sliderDiv;
 }
 
 /**
@@ -222,56 +205,45 @@ export function setExample(title, transforms = undefined) {
     // division to hold the example 
     let exampleDiv = document.createElement("div");
     exampleDiv.id = name + "-example";
-    exampleDiv.style.cssText = "display: none; align-items: flex-start";
+    exampleDiv.style.cssText = "width: 1200px; display: none; align-items: flex-start";
     document.getElementsByTagName("body")[0].appendChild(exampleDiv);
 
     // left part, including a canvas, checkboxes, a slider, and a code block
     let leftDiv = document.createElement("div");
     leftDiv.id = name + "-leftDiv";
-    leftDiv.style.cssText = "padding-right: 30px";
+    leftDiv.style.cssText = "width: 600px";
     document.getElementById(exampleDiv.id).appendChild(leftDiv);
 
     let leftRenderer = new T.WebGLRenderer();
     leftRenderer.setSize(400, 400);
-    leftRenderer.domElement.id = name + "-rightRd";
+    leftRenderer.domElement.id = name + "-leftRd";
     document.getElementById(leftDiv.id).appendChild(leftRenderer.domElement);
 
     let leftScene = new T.Scene();
     leftScene.background = new T.Color("white");
-    let camera = new T.PerspectiveCamera(40, leftRenderer.domElement.width / leftRenderer.domElement.height, 1, 1000);
+    let leftCamera = new T.PerspectiveCamera(40, leftRenderer.domElement.width / leftRenderer.domElement.height, 1, 1000);
 
-    camera.position.z = 10;
-    camera.position.y = 10;
-    camera.position.x = 10;
-    camera.lookAt(0, 0, 0);
+    leftCamera.position.z = 10;
+    leftCamera.position.y = 10;
+    leftCamera.position.x = 10;
+    leftCamera.lookAt(0, 0, 0);
 
     // since we're animating, add OrbitControls
-    let controls = new OrbitControls(camera, leftRenderer.domElement);
+    let leftControls = new OrbitControls(leftCamera, leftRenderer.domElement);
 
     leftScene.add(new T.AmbientLight("white", 1));
 
     // two lights - both a little off white to give some contrast
-    let dirLight1 = new T.DirectionalLight(0xF0E0D0, 1);
-    dirLight1.position.set(1, 1, 0);
-    leftScene.add(dirLight1);
+    let leftDirLight = new T.DirectionalLight(0xF0E0D0, 1);
+    leftDirLight.position.set(1, 1, 0);
+    leftScene.add(leftDirLight);
 
     // let dirLight2 = new T.DirectionalLight(0xD0E0F0, 0.7);
     // dirLight2.position.set(0, 1, -0.2);
     // scene.add(dirLight2);
 
-    // let dirLight3 = new T.DirectionalLight(0xD0E0F0, 0.7);
-    // dirLight3.position.set(1, 0, -0.2);
-    // scene.add(dirLight3);
-
-    // // make a ground plane
-    // let groundBox = new T.BoxGeometry(10, 0.1, 10);
-    // let groundMesh = new T.Mesh(groundBox, new T.MeshStandardMaterial({color: "green"}));
-    // // put the top of the box at the ground level (0)
-    // groundMesh.position.y = -0.05;
-    // scene.add(groundMesh);
-
-    let csys = drawCsys();
-    leftScene.add(csys);
+    let leftCsys = drawCsys();
+    leftScene.add(leftCsys);
 
     let leftPanel = document.createElement("div");
     leftPanel.id = name + "-leftPanel";
@@ -306,7 +278,7 @@ export function setExample(title, transforms = undefined) {
 
     let leftCodeDiv = document.createElement("div");
     leftCodeDiv.style.cssText = "font-family: 'Courier New', Courier, monospace; " +
-        "font-size: 120%; padding-top: 5px";
+        "font-size: 100%; padding-top: 5px";
     document.getElementById(leftDiv.id).appendChild(leftCodeDiv);
 
     // right part, including a canvas, a code block
@@ -314,44 +286,54 @@ export function setExample(title, transforms = undefined) {
     rightDiv.id = name + "-rightDiv";
     document.getElementById(exampleDiv.id).appendChild(rightDiv);
 
-    //let rightScene = setRenderer(rightDiv, name + "-rightRd");
+    let rightRenderer = new T.WebGLRenderer();
+    rightRenderer.setSize(400, 400);
+    rightRenderer.domElement.id = name + "-rightRd";
+    document.getElementById(rightDiv.id).appendChild(rightRenderer.domElement);
+
+    let rightScene = new T.Scene();
+    rightScene.background = new T.Color("white");
+    let rightCamera = new T.PerspectiveCamera(40, rightRenderer.domElement.width / rightRenderer.domElement.height, 1, 1000);
+
+    rightCamera.position.z = 10;
+    rightCamera.position.y = 10;
+    rightCamera.position.x = 10;
+    rightCamera.lookAt(0, 0, 0);
+
+    // since we're animating, add OrbitControls
+    let rightControls = new OrbitControls(rightCamera, rightRenderer.domElement);
+
+    rightScene.add(new T.AmbientLight("white", 1));
+
+    // two lights - both a little off white to give some contrast
+    let rightDirLight = new T.DirectionalLight(0xF0E0D0, 1);
+    rightDirLight.position.set(1, 1, 0);
+    rightScene.add(rightDirLight);
+
+    // let dirLight2 = new T.DirectionalLight(0xD0E0F0, 0.7);
+    // dirLight2.position.set(0, 1, -0.2);
+    // scene.add(dirLight2);
+
+    let rightCsys = drawCsys();
+    rightScene.add(rightCsys);
 
     let rightPanel = document.createElement("div");
     rightPanel.id = name + "-rightPanel";
     rightPanel.style.cssText = "margin-top: 27px";
     document.getElementById(rightDiv.id).appendChild(rightPanel);
 
-    // checkbox and label for showing the original coordinate system
-    let orTogRight = document.createElement("input");
-    orTogRight.setAttribute("type", "checkbox");
-    orTogRight.setAttribute("checked", "true");
-    orTogRight.id = name + "-ot";
-    document.getElementById(rightPanel.id).appendChild(orTogRight);
-
-    let orLabelRight = document.createElement("label");
-    orLabelRight.setAttribute("for", orTogRight.id);
-    orLabelRight.innerText = "Show the original coordinate system";
-    document.getElementById(rightPanel.id).appendChild(orLabelRight);
-
-    let rightBrOne = document.createElement("br");
-    rightBrOne.id = name + "-rightBr1";
-    document.getElementById(rightPanel.id).appendChild(rightBrOne);
-
-    // checkbox and label for showing the final coordinate system
-    let finalTog = document.createElement("input");
-    finalTog.setAttribute("type", "checkbox");
-    finalTog.id = name + "-cst";
-    document.getElementById(rightPanel.id).appendChild(finalTog);
-
-    let finalLabel = document.createElement("label");
-    finalLabel.setAttribute("for", finalTog.id);
-    finalLabel.innerText = "Show the final coordinate system";
-    document.getElementById(rightPanel.id).appendChild(finalLabel);
-
     let rightCodeDiv = document.createElement("div");
     rightCodeDiv.style.cssText = "font-family: 'Courier New', Courier, monospace; " +
-        "font-size: 120%; padding-top: 5px";
+        "font-size: 100%; padding-top: 35px";
     document.getElementById(rightDiv.id).appendChild(rightCodeDiv);
+
+    resultTog.onchange = function () {
+        if (resultTog.checked) {
+            document.getElementById(rightDiv.id).style.display = "block";
+        } else {
+            document.getElementById(rightDiv.id).style.display = "none";
+        }
+    };
 
     let rc = new RunCanvas(leftRenderer.domElement, undefined);
     rc.noloop = true;
@@ -360,8 +342,12 @@ export function setExample(title, transforms = undefined) {
 
     function animate() {
         let param = Number(rc.range.value);
-        doTransform(leftScene, transforms, param, dirTog ? (dirTog.checked ? -1 : 1) : 1);
-        leftRenderer.render(leftScene, camera);
+        let leftHtml = doTransform(leftScene, transforms, param, dirTog ? (dirTog.checked ? -1 : 1) : 1);
+        leftCodeDiv.innerHTML = leftHtml;
+        leftRenderer.render(leftScene, leftCamera);
+        let rightHtml = doTransform(rightScene, transforms, transforms.length);
+        rightCodeDiv.innerHTML = rightHtml;
+        rightRenderer.render(rightScene, rightCamera);
         window.requestAnimationFrame(animate);
     }
     animate();
