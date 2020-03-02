@@ -83,16 +83,17 @@ function drawCsys(colors = ["black", "grey"]) {
  * Do transforms as specified in transformList. The number of transforms 
  * to do is decided by param
  */
-function doTransform(scene, transformList, param, direction = 1) {
+function doTransform(scene, transformList, param) {
     // is the text in the code section under the canvas
     let html = "";
 
     // 0 and 1 are lights, 2 is the coordinate system
-    for (let i = 3; i < scene.children.length; i++) {
-        let object = scene.children[i];
-        object.position.set(0, 0, 0);
-        object.rotation.set(0, 0, 0);
-        object.scale.set(1, 1, 1);
+    for (let i = scene.children.length; i >= 3; i--) {
+        // let object = scene.children[i];
+        // object.position.set(0, 0, 0);
+        // object.rotation.set(0, 0, 0);
+        // object.scale.set(1, 1, 1);
+        scene.remove(scene.children[i]);
     }
 
     // iterate through all transforms in the list
@@ -105,9 +106,7 @@ function doTransform(scene, transformList, param, direction = 1) {
         let object = scene.getObjectByName(name);
 
         // keep track of which commands are ready to be run
-        let amt = (direction >= 0) ?
-            (i > param) ? 0 : Math.min(1, param - i) : // if direction >= 0, do this line
-            ((i + 1) < param) ? 0 : Math.min(1, (i + 1) - param); // if not, do this line
+        let amt = (i > param) ? 0 : Math.min(1, param - i);
 
         // console.log(`param ${param} i ${i} amt ${amt} `)
 
@@ -123,6 +122,15 @@ function doTransform(scene, transformList, param, direction = 1) {
 
         if (command == "box") {
             let color = t.length > 5 ? t[5] : "blue";
+            let parent;
+            let parentName;
+            if (t.length > 6) {
+                parent = scene.getObjectByName(t[6]);
+                parentName = t[6];
+            } else {
+                parent = scene;
+                parentName = "scene";
+            }
             if (!object && amt) {
                 let boxMat = new T.MeshStandardMaterial({color: color});
                 let width = t[2];
@@ -131,7 +139,7 @@ function doTransform(scene, transformList, param, direction = 1) {
                 let boxGeom = new T.BoxGeometry(width, height, depth);
                 let boxMesh = new T.Mesh(boxGeom, boxMat);
                 boxMesh.name = name;
-                scene.add(boxMesh);
+                parent.add(boxMesh);
                 let axesHelper = new T.AxesHelper(3);
                 boxMesh.add(axesHelper);
             } 
@@ -141,7 +149,7 @@ function doTransform(scene, transformList, param, direction = 1) {
             html += stylize(amt, `let ` + name + `Mat = new T.MeshStandardMaterial({color: "${color}"});`);
             html += stylize(amt, `let ` + name + `Geom = new T.BoxGeometry(${t[2]}, ${t[3]}, ${t[4]});`);
             html += stylize(amt, `let ` + name + `Mesh = new T.Mesh(boxGeom, boxMat);`);
-            html += stylize(amt, `scene.add(` + name + `Mesh);`);
+            html += stylize(amt, parentName + `.add(` + name + `Mesh);`);
         } else {
             // translate, rotate, scale
             if (command == "translateX") {
@@ -276,22 +284,8 @@ export function setExample(title, transforms = undefined) {
 
     let leftPanel = document.createElement("div");
     leftPanel.id = name + "-leftPanel";
+    leftPanel.style.cssText = "padding-top: 10px";
     document.getElementById(leftDiv.id).appendChild(leftPanel);
-
-    //checkbox and label for reversion
-    let dirTog = document.createElement("input");
-    dirTog.setAttribute("type", "checkbox");
-    dirTog.id = name + "-dt";
-    document.getElementById(leftPanel.id).appendChild(dirTog);
-
-    let dirLabel = document.createElement("label");
-    dirLabel.setAttribute("for", dirTog.id);
-    dirLabel.innerText = "Reverse";
-    document.getElementById(leftPanel.id).appendChild(dirLabel);
-
-    let leftBrOne = document.createElement("br");
-    leftBrOne.id = name + "-leftBr2";
-    document.getElementById(leftPanel.id).appendChild(leftBrOne);
 
     // checkbox and label for showing the final result
     let resultTog = document.createElement("input");
@@ -348,7 +342,7 @@ export function setExample(title, transforms = undefined) {
 
     let rightPanel = document.createElement("div");
     rightPanel.id = name + "-rightPanel";
-    rightPanel.style.cssText = "margin-top: 27px";
+    rightPanel.style.cssText = "margin-top: 20px";
     document.getElementById(rightDiv.id).appendChild(rightPanel);
 
     let rightCodeDiv = document.createElement("div");
@@ -371,7 +365,7 @@ export function setExample(title, transforms = undefined) {
 
     function animate() {
         let param = Number(rc.range.value);
-        let leftHtml = doTransform(leftScene, transforms, param, dirTog ? (dirTog.checked ? -1 : 1) : 1);
+        let leftHtml = doTransform(leftScene, transforms, param);
         leftCodeDiv.innerHTML = leftHtml;
         leftRenderer.render(leftScene, leftCamera);
         let rightHtml = doTransform(rightScene, transforms, transforms.length);
@@ -380,9 +374,6 @@ export function setExample(title, transforms = undefined) {
         window.requestAnimationFrame(animate);
     }
     animate();
-    
-    // if (transforms) {
-    //     run(transforms);
-    // }   
+
     return exampleDiv;
 }
